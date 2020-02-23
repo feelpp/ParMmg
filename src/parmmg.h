@@ -175,6 +175,12 @@ extern "C" {
  */
 #define PMMG_GRPSPL_MMG_TARGET 2
 
+/**
+ *
+ * Use custom partitioning saved in the reference field (1=yes, 0=no)
+ *
+ */
+#define PMMG_PREDEF_PART 0
 
 /**< Subgroups target size for a fast remeshing step */
 static const int PMMG_REMESHER_TARGET_MESH_SIZE = -30000000;
@@ -522,7 +528,7 @@ void PMMG_computeWgt_mesh( MMG5_pMesh mesh,MMG5_pSol met,int tag );
 int PMMG_oldGrps_newGroup( PMMG_pParMesh parmesh,int igrp );
 int PMMG_oldGrps_fillGroup( PMMG_pParMesh parmesh,int igrp );
 int PMMG_update_oldGrps( PMMG_pParMesh parmesh );
-int PMMG_interpMetrics_grps( PMMG_pParMesh parmesh,int* );
+int PMMG_interpMetrics( PMMG_pParMesh parmesh,int* );
 int PMMG_copyMetrics_point( PMMG_pGrp grp,PMMG_pGrp oldGrp, int* permNodGlob);
 
 /* Communicators building and unallocation */
@@ -540,7 +546,6 @@ int PMMG_build_faceCommFromNodes( PMMG_pParMesh parmesh );
 int PMMG_build_simpleExtNodeComm( PMMG_pParMesh parmesh );
 int PMMG_build_intNodeComm( PMMG_pParMesh parmesh );
 int PMMG_build_completeExtNodeComm( PMMG_pParMesh parmesh );
-int PMMG_parbdySet( PMMG_pParMesh parmesh );
 
 int PMMG_pack_faceCommunicators(PMMG_pParMesh parmesh);
 int PMMG_pack_nodeCommunicators(PMMG_pParMesh parmesh);
@@ -550,6 +555,16 @@ int PMMG_check_intFaceComm( PMMG_pParMesh parmesh );
 int PMMG_check_extFaceComm( PMMG_pParMesh parmesh );
 int PMMG_check_intNodeComm( PMMG_pParMesh parmesh );
 int PMMG_check_extNodeComm( PMMG_pParMesh parmesh );
+
+/* Tags */
+void PMMG_tag_par_node(MMG5_pPoint ppt);
+void PMMG_tag_par_edge(MMG5_pxTetra pxt,int j);
+void PMMG_tag_par_face(MMG5_pxTetra pxt,int j);
+void PMMG_untag_par_node(MMG5_pPoint ppt);
+void PMMG_untag_par_edge(MMG5_pxTetra pxt,int j);
+void PMMG_untag_par_face(MMG5_pxTetra pxt,int j);
+int  PMMG_updateTag(PMMG_pParMesh parmesh);
+int  PMMG_parbdySet( PMMG_pParMesh parmesh );
 
 /* Mesh merge */
 int PMMG_mergeGrpJinI_interfacePoints_addGrpJ( PMMG_pParMesh,PMMG_pGrp,PMMG_pGrp);
@@ -591,7 +606,6 @@ void PMMG_parmesh_Free_Listgrp( PMMG_pParMesh parmesh );
 int  PMMG_clean_emptyMesh( PMMG_pParMesh parmesh, PMMG_pGrp listgrp, int ngrp );
 int  PMMG_resize_extComm ( PMMG_pParMesh,PMMG_pExt_comm,int,int* );
 int  PMMG_resize_extCommArray ( PMMG_pParMesh,PMMG_pExt_comm*,int,int*);
-int  PMMG_updateTag(PMMG_pParMesh parmesh);
 
 /* Tools */
 int PMMG_copy_mmgInfo ( MMG5_Info *info, MMG5_Info *info_cpy );
