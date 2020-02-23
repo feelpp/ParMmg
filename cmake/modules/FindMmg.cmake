@@ -130,8 +130,9 @@ elseif(MMG_BUILDDIR)
   find_path(MMG_libmmgtypes.h_DIRS
     NAMES libmmgtypes.h
     HINTS ${MMG_BUILDDIR}
-    PATH_SUFFIXES "include" "include/mmg" "include/mmg/mmg2d"
-        "include/mmg/mmgs" "include/mmg/mmg3d")
+    PATH_SUFFIXES include include/mmg include/mmg/mmg2d
+    include/mmg/mmgs include/mmg/mmg3d)
+  message(STATUS "mmg inc dirs ${MMG_BUILDDIR} / ${MMG_libmmgtypes.h_DIRS}")
 else()
   if(MMG_DIR)
     set(MMG_libmmgtypes.h_DIRS "MMG_libmmgtypes.h_DIRS-NOTFOUND")
@@ -217,7 +218,7 @@ list(REMOVE_DUPLICATES _lib_env)
 if(MMG_LIBDIR)
   set(MMG_mmg_LIBRARY "MMG_mmg_LIBRARY-NOTFOUND")
   find_library(MMG_mmg_LIBRARY
-    NAMES mmg
+    NAMES mmg feelpp_mmg
     HINTS ${MMG_LIBDIR})
 else()
   if(MMG_DIR)
@@ -225,19 +226,19 @@ else()
 
     if ( MMG_BUILDDIR )
       find_library(MMG_mmg_LIBRARY
-        NAMES mmg
+        NAMES mmg feelpp_mmg
         HINTS ${MMG_BUILDDIR}
         PATH_SUFFIXES lib lib32 lib64)
     else ()
       find_library(MMG_mmg_LIBRARY
-        NAMES mmg
+        NAMES mmg feelpp_mmg
         HINTS ${MMG_DIR} ${MMG_BUILDDIR_INTERNAL}
         PATH_SUFFIXES lib lib32 lib64)
     endif()
   else()
     set(MMG_mmg_LIBRARY "MMG_mmg_LIBRARY-NOTFOUND")
     find_library(MMG_mmg_LIBRARY
-      NAMES mmg
+      NAMES mmg feelpp_mmg
       HINTS ${_lib_env})
   endif()
 endif()

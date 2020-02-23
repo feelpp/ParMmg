@@ -3,7 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
 INCLUDE(CMakeDependentOption)
 INCLUDE(cmake/modules/macros.cmake)
 
-PROJECT (parmmg)
+PROJECT (feelpp_parmmg)
 
 ###############################################################################
 #####
