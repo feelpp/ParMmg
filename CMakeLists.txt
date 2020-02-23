@@ -5,6 +5,10 @@ INCLUDE(cmake/modules/macros.cmake)
 
 PROJECT (feelpp_parmmg)
 
+# Must use GNUInstallDirs to install libraries into correct
+# locations on all platforms.
+include(GNUInstallDirs)
+
 ###############################################################################
 #####
 #####         Release version and date
