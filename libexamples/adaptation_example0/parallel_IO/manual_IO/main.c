@@ -64,7 +64,7 @@ int main(int argc,char *argv[]) {
   tmp     = NULL;
 
   if ( (argc!=4) && !rank ) {
-    printf(" Usage: %s fileout io_option\n",argv[0]);
+    printf(" Usage: %s fileout niter API_mode\n",argv[0]);
     printf("     niter    = 0   to perform a dry run of Parmmg and check paralle interfaces construction\n");
     printf("     niter    = [n] to perform [n] iterations of remeshing\n");
     printf("     API_mode = 0   to Get/Set the parallel interfaces through triangles\n");
@@ -211,9 +211,17 @@ int main(int argc,char *argv[]) {
   /** 3) Manually partition the global mesh */
   /** a) Create local meshes */
   int nv, nt, ne, ncomm, *color_node, *color_face, *ntifc, *npifc;
+  color_node = color_face = ntifc = npifc = NULL;
   switch( parmesh->nprocs ) {
+    case 1:
+      /* no partitioning */
+      nv = 12;
+      nt = 20;
+      ne = 12;
+      ncomm = 0;
+      break;
     case 2:
-      /* partitioning into 4 procs */
+      /* partitioning into 2 procs */
       nv = 8;
       nt = 12;
       ne = 6;
@@ -311,6 +319,9 @@ int main(int argc,char *argv[]) {
   }
 
   switch( parmesh->nprocs ) {
+    case 1 :
+      /* empty communicators */
+      break;
     case 2 :
       ifc_tria_glob[0][0] = 21;
       ifc_tria_glob[0][1] = 22;
@@ -379,6 +390,27 @@ int main(int argc,char *argv[]) {
 
 
   switch( parmesh->nprocs ) {
+    case 1 :
+      {
+        /* the local mesh is the global mesh */
+        int vert_mask[12], tetra_mask[12], tria_mask[20];
+        int i;
+        for( i = 0; i < 12; i++ ) {
+          vert_mask[i] = i+1;
+          tetra_mask[i] = i+1;
+        }
+        for( i = 0; i < 20; i++ )
+          tria_mask[i] = i+1;
+        get_local_mesh(nv, ne, nt, vert_mask, inv_vert_mask, tetra_mask,
+                       tria_mask, inv_tria_mask,
+                       vert_coor,vert_coor_all,vert_ref,vert_ref_all,
+                       tetra_vert,tetra_vert_all,tetra_ref,tetra_ref_all,
+                       tria_vert,tria_vert_all,tria_ref,tria_ref_all,
+                       met,met_all,ncomm,
+                       ntifc,ifc_tria_loc,ifc_tria_glob,
+                       npifc,ifc_nodes_loc,ifc_nodes_glob);
+        break;
+      }
     case 2 :
       /* partitioning into 2 procs */
       switch( parmesh->myrank ) {
@@ -686,7 +718,7 @@ int main(int argc,char *argv[]) {
         exit(EXIT_FAILURE);
       }
       /* Third */
-      pos = 6*(k-1);
+      pos = 6*k;
       if ( PMMG_Set_ithSol_inSolsAtVertices(parmesh,3,&(tensor_sol[pos]),k+1) != 1 ) {
         MPI_Finalize();
         exit(EXIT_FAILURE);
@@ -790,10 +822,17 @@ int main(int argc,char *argv[]) {
     exit(EXIT_FAILURE);
   };
 
+  /* Don't remesh the surface */
+  if( !PMMG_Set_iparameter( parmesh, PMMG_IPARAM_nosurf, 1 ) ) {
+    MPI_Finalize();
+    exit(EXIT_FAILURE);
+  };
+
+
   /* remeshing function */
   ierlib = PMMG_parmmglib_distributed( parmesh );
 
-  if ( ierlib != PMMG_STRONGFAILURE ) {
+  if ( ierlib == PMMG_SUCCESS ) {
 
     /** If no remeshing is performed (zero remeshing iterations), check set
      * parallel interfaces against input data. */

@@ -94,6 +94,10 @@ void PMMG_untag_par_node(MMG5_pPoint ppt){
     if ( ppt->tag & MG_BDY )    ppt->tag &= ~MG_BDY;
     if ( ppt->tag & MG_REQ )    ppt->tag &= ~MG_REQ;
     if ( ppt->tag & MG_NOSURF ) ppt->tag &= ~MG_NOSURF;
+#warning Option -nosurf overrides part of the surface analysis
+    if ( ppt->tag & MG_NOM )    ppt->tag &= ~MG_NOM;
+    if ( ppt->tag & MG_CRN )    ppt->tag &= ~MG_CRN;
+    if ( ppt->tag & MG_GEO )    ppt->tag &= ~MG_GEO;
   }
 }
 
@@ -110,6 +114,9 @@ void PMMG_untag_par_edge(MMG5_pxTetra pxt,int j){
     if ( pxt->tag[j] & MG_BDY)    pxt->tag[j] &= ~MG_BDY;
     if ( pxt->tag[j] & MG_REQ)    pxt->tag[j] &= ~MG_REQ;
     if ( pxt->tag[j] & MG_NOSURF) pxt->tag[j] &= ~MG_NOSURF;
+#warning Option -nosurf overrides part of the surface analysis
+    if ( pxt->tag[j] & MG_NOM)    pxt->tag[j] &= ~MG_NOM;
+    if ( pxt->tag[j] & MG_GEO)    pxt->tag[j] &= ~MG_GEO;
   }
 }
 
@@ -129,6 +136,54 @@ void PMMG_untag_par_face(MMG5_pxTetra pxt,int j){
   }
 }
 
+/**
+ * \param parmesh pointer toward a parmesh structure
+ *
+ * \return 1 if success, 0 if fail.
+ *
+ * Count the number of parallel triangle in each tetra and store the info into
+ * the mark field of the tetra.
+ * Reset the OLDPARBDY tag after mesh adaptation in order to track previous
+ * parallel faces during load balancing.
+ *
+ */
+inline int PMMG_resetOldTag(PMMG_pParMesh parmesh) {
+  MMG5_pMesh   mesh;
+  MMG5_pTetra  pt;
+  MMG5_pxTetra pxt;
+  int          k,i,j;
+
+  for ( i=0; i<parmesh->ngrp; ++i ) {
+    mesh = parmesh->listgrp[i].mesh;
+
+    if ( !mesh ) continue;
+
+    for ( k=1; k<=mesh->ne; ++k ) {
+      pt       = &mesh->tetra[k];
+      pt->mark = 1;
+
+      if ( (!MG_EOK(pt)) || (!pt->xt) ) continue;
+      pxt = &mesh->xtetra[pt->xt];
+
+      for ( j=0; j<4; ++j ) {
+        if ( pxt->ftag[j] & MG_PARBDY ) {
+          /* Increase counter */
+          ++pt->mark;
+          /* Mark face as a previously parallel one */
+          pxt->ftag[j] |= MG_OLDPARBDY;
+          /* Check that there is no reference on an old parallel face that is
+           * not a true boundary */
+          if( !(pxt->ftag[j] & MG_PARBDYBDY) ) assert( !pxt->ref[j] );
+        } else if ( pxt->ftag[j] & MG_OLDPARBDY ) {
+          /* Untag faces which are not parallel anymore */
+          pxt->ftag[j] &= ~MG_OLDPARBDY;
+        }
+      }
+    }
+  }
+
+  return 1;
+}
 
 /**
  * \param parmesh pointer toward the parmesh structure.
@@ -147,10 +202,10 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
   MMG5_HGeom      hash;
   int             *node2int_node_comm0_index1,*face2int_face_comm0_index1;
   int             grpid,iel,ifac,ia,ip0,ip1,k,j,i,getref;
-  size_t          available,oldMemMax;
+  int16_t         gettag;
 
   /* Compute available memory (previously given to the communicators) */
-  PMMG_TRANSFER_AVMEM_TO_PARMESH(parmesh,available,oldMemMax);
+  PMMG_TRANSFER_AVMEM_TO_PARMESH(parmesh);
 
   /* Loop on groups */
   for ( grpid=0; grpid<parmesh->ngrp; grpid++ ) {
@@ -159,7 +214,7 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
     node2int_node_comm0_index1 = grp->node2int_node_comm_index1;
     face2int_face_comm0_index1 = grp->face2int_face_comm_index1;
 
-    PMMG_TRANSFER_AVMEM_FROM_PMESH_TO_MESH(parmesh,mesh,available,oldMemMax);
+    PMMG_TRANSFER_AVMEM_FROM_PARMESH_TO_MESH(parmesh,mesh);
 
     /** Step 1: Loop on xtetras to untag old parallel entities, then build
      * hash table for edges on xtetras. */
@@ -180,7 +235,7 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
         PMMG_untag_par_face(pxt,j);
     }
 
-    /* Create hash table for edges */
+    /* Create hash table for edges on xtetra, without reference or tags */
     if ( !MMG5_hNew(mesh, &hash, 6*mesh->xt, 8*mesh->xt) ) return 0;
     for ( k=1; k<=mesh->ne; k++ ) {
       pt = &mesh->tetra[k];
@@ -192,7 +247,8 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
       }
     }
 
-    /** Step 2: Re-tag boundary entities starting from xtetra faces. */
+    /** Step 2: Re-tag boundary entities starting from xtetra faces.
+     *  Just add the appropriate tag to the face, edge (hash) or node. */
     for ( k=1; k<=mesh->ne; k++ ) {
       pt = &mesh->tetra[k];
       if ( !pt->xt ) continue;
@@ -260,7 +316,8 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
       }
     }
 
-    /** Step 4: Get edge tag and delete hash table */
+    /** Step 4: Get edge tag from hash table, add it to the edge tag on the
+     *  xtetra,and delete hash table */
     for ( k=1; k<=mesh->ne; k++ ) {
       pt = &mesh->tetra[k];
       if ( !pt->xt ) continue;
@@ -268,8 +325,9 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
       for ( j=0; j<6; j++ ) {
         ip0 = pt->v[MMG5_iare[j][0]];
         ip1 = pt->v[MMG5_iare[j][1]];
-        /* Put the tag stored in the hash table on the xtetra edge */
-        if( !MMG5_hGet( &hash, ip0, ip1, &getref, &pxt->tag[j] ) ) return 0;
+        /* Add the tag stored in the hash table to the xtetra edge */
+        if( !MMG5_hGet( &hash, ip0, ip1, &getref, &gettag ) ) return 0;
+        pxt->tag[j] |= gettag;
       }
     }
     PMMG_DEL_MEM( mesh, hash.geom, MMG5_hgeom, "Edge hash table" );
@@ -281,7 +339,7 @@ int PMMG_updateTag(PMMG_pParMesh parmesh) {
       if( ppt->xp ) ppt->xp = 0;
     }
 
-    PMMG_TRANSFER_AVMEM_FROM_MESH_TO_PMESH(parmesh,mesh,available,oldMemMax);
+    PMMG_TRANSFER_AVMEM_FROM_MESH_TO_PARMESH(parmesh,mesh);
   }
 
   return 1;
@@ -336,11 +394,14 @@ int PMMG_parbdySet( PMMG_pParMesh parmesh ) {
       assert( MG_EOK(pt) && pt->xt );
       pxt = &mesh->xtetra[pt->xt];
 
-      /* Tag face as "true" boundary if its second ref is different */
-      if( !seenFace[idx] )
+      /* Tag face as "true" boundary if its second ref is different or if
+       * triangle has a non-nul ref in opnbdy mode */
+      if( !seenFace[idx] ) {
         intvalues[idx] = pt->ref;
-      else if( intvalues[idx] != pt->ref )
+      }
+      else if ( (mesh->info.opnbdy && pxt->ref[ifac]>0) || (intvalues[idx] != pt->ref ) ) {
         pxt->ftag[ifac] |= MG_PARBDYBDY;
+      }
 
       /* Mark face each time that it's seen */
       seenFace[idx]++;
@@ -396,9 +457,24 @@ int PMMG_parbdySet( PMMG_pParMesh parmesh ) {
       /* Faces on the external communicator have been visited only once */
       if( seenFace[idx] != 1 ) continue;
 
-      /* Tag face as "true" boundary if its ref is different */
-      if( intvalues[idx] != pt->ref )
+      /* Tag face as "true" boundary if its ref is different (or if triangle has
+       * a non nul ref in openbdy mode), delete reference if it is only a
+       * parallel boundary */
+      if ( (mesh->info.opnbdy && pxt->ref[ifac]>0) ) {
         pxt->ftag[ifac] |= MG_PARBDYBDY;
+      } else if ( intvalues[idx] > pt->ref ) {
+        /* Tria belongs to my neighbor */
+        pxt->ftag[ifac] |= MG_PARBDYBDY;
+        MG_CLR(pxt->ori,ifac);
+      }
+      else if ( intvalues[idx] < pt->ref ) {
+        /* Tria belongs to me */
+        pxt->ftag[ifac] |= MG_PARBDYBDY;
+        MG_SET(pxt->ori,ifac);
+      }
+      else {
+        pxt->ref[ifac] = PMMG_NUL;
+      }
     }
   }
 
