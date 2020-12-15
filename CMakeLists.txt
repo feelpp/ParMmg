@@ -656,4 +656,4 @@ CMAKE_DEPENDENT_OPTION (
   (non library tests)" OFF  "BUILD_TESTING;LIBPARMMG_INTERNAL" OFF )
 
 
-INCLUDE( ${PROJECT_SOURCE_DIR}/cmake/testing/pmmg_tests.cmake )
+# INCLUDE( ${PROJECT_SOURCE_DIR}/cmake/testing/pmmg_tests.cmake )
