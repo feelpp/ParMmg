@@ -290,7 +290,7 @@ IF ( DOWNLOAD_MMG )
   INCLUDE_DIRECTORIES(${MMG_SOURCE_DIR}/src/mmg3d)
   INCLUDE_DIRECTORIES(${MMG_SOURCE_DIR}/src/common)
 
-ELSE ( )
+ELSEIF  ( 0 )
   UNSET ( USE_POINTMAP CACHE )
 
   SET(MMG_DIR "" CACHE PATH "Installation directory for mmg")
@@ -516,6 +516,16 @@ IF ( LIBPARMMG_SHARED )
 
   IF ( DOWNLOAD_MMG )
     Add_Dependencies(lib${PROJECT_NAME}_so Mmg)
+  else()
+    add_dependencies(lib${PROJECT_NAME}_so libfeelpp_mmg_so)
+    target_include_directories(lib${PROJECT_NAME}_so PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../mmg/include>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/common>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../mmg/src/common>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/mmg2d>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/mmgs>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/mmg3d>
+      $<INSTALL_INTERFACE:include/feelpp> )  
   ENDIF ( )
 
   IF ( DOWNLOAD_METIS )
@@ -544,12 +554,12 @@ INSTALL(FILES ${pmmg_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/parmmg COM
 COPY_HEADERS_AND_CREATE_TARGET ( ${PMMG_SOURCE_DIR} ${PMMG_BINARY_DIR} ${PMMG_INCLUDE} )
 
 
-install(EXPORT ParMmgTargets
-  FILE ParMmgTargets.cmake
-  NAMESPACE ParMmg::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/parmmg
-  )
-
+#install(EXPORT ParMmgTargets
+#  FILE ParMmgTargets.cmake
+#  NAMESPACE ParMmg::
+#  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/parmmg
+#  )
+#
 IF (LIBPARMMG_STATIC OR LIBPARMMG_SHARED)
   SET(LIBPARMMG_INTERNAL ON )
 ELSE()
