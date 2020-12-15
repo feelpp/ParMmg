@@ -581,11 +581,11 @@ ADD_AND_INSTALL_EXECUTABLE ( ${PROJECT_NAME}
   "${pmmg_library_files}" ${pmmg_main_file} )
 
 IF ( DOWNLOAD_MMG )
-  Add_Dependencies(parmmg Mmg)
+  Add_Dependencies({PROJECT_NAME} Mmg)
 ENDIF ( )
 
 IF ( DOWNLOAD_METIS )
-  Add_Dependencies(parmmg Metis)
+  Add_Dependencies({PROJECT_NAME} Metis)
 ENDIF ( )
 
 ############################################################################
