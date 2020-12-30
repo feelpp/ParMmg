@@ -517,7 +517,7 @@ IF ( LIBPARMMG_SHARED )
   IF ( DOWNLOAD_MMG )
     Add_Dependencies(lib${PROJECT_NAME}_so Mmg)
   else()
-    add_dependencies(lib${PROJECT_NAME}_so libfeelpp_mmg_so)
+    target_link_libraries(lib${PROJECT_NAME}_so libfeelpp_mmg_so libfeelpp_mmgs_so libfeelpp_mmg3d_so)
     target_include_directories(lib${PROJECT_NAME}_so PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../mmg/include>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/common>
@@ -581,11 +581,12 @@ ADD_AND_INSTALL_EXECUTABLE ( ${PROJECT_NAME}
   "${pmmg_library_files}" ${pmmg_main_file} )
 
 IF ( DOWNLOAD_MMG )
-  Add_Dependencies({PROJECT_NAME} Mmg)
+  Add_Dependencies(${PROJECT_NAME} Mmg)
 ENDIF ( )
+add_dependencies(${PROJECT_NAME} libfeelpp_parmmg_so)
 
 IF ( DOWNLOAD_METIS )
-  Add_Dependencies({PROJECT_NAME} Metis)
+  Add_Dependencies(${PROJECT_NAME} Metis)
 ENDIF ( )
 
 ############################################################################
