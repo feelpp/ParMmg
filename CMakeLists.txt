@@ -566,12 +566,20 @@ ELSE()
   SET(LIBPARMMG_INTERNAL OFF )
 ENDIF()
 
+set( PARMMG_CMAKE_INSTALL_DIR share/feelpp/feel/cmake/modules )
+
+configure_package_config_file(cmake/modules/parmmgConfig.cmake.in
+${PROJECT_BINARY_DIR}/parmmgConfig.cmake
+INSTALL_DESTINATION ${PARMMG_CMAKE_INSTALL_DIR} )
+
 install(EXPORT ParMmgTargets
   FILE ParMmgTargets.cmake
   NAMESPACE ParMmg::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/parmmg
+  DESTINATION ${PARMMG_CMAKE_INSTALL_DIR}
   )
 
+  install(FILES ${PROJECT_BINARY_DIR}/parmmgConfig.cmake
+          DESTINATION ${PARMMG_CMAKE_INSTALL_DIR} )
 ###############################################################################
 #####
 #####         Compile PMMG executable
