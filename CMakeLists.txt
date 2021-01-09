@@ -187,7 +187,7 @@ ENDIF ( )
 #####         VTK (to parse (p)vtp/(p)vtu files )
 #####
 ############################################################################
-OPTION ( USE_VTK "Use VTK I/O" ON )
+OPTION ( USE_VTK "Use VTK I/O" OFF )
 
 IF ( USE_VTK )
   FIND_PACKAGE(VTK QUIET)
