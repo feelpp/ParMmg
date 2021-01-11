@@ -189,7 +189,7 @@ ENDIF ( )
 ############################################################################
 OPTION ( USE_VTK "Use VTK I/O" OFF )
 
-IF ( USE_VTK )
+IF ( 0 ) # USE_VTK )
   FIND_PACKAGE(VTK QUIET)
 
   IF ( NOT VTK_FOUND )
@@ -211,7 +211,7 @@ IF( SCOTCH_FOUND )
 ENDIF()
 
 
-IF ( VTK_FOUND )
+IF ( 0 ) # VTK_FOUND )
   ENABLE_LANGUAGE ( CXX )
   ADD_DEFINITIONS(-DUSE_VTK)
   MESSAGE ( STATUS "Compilation with VTK: add vtp and vtu I/O." )
@@ -233,7 +233,8 @@ SET ( SCOTCH_CFG -DUSE_SCOTCH=${USE_SCOTCH} -DSCOTCH_DIR=${SCOTCH_DIR}
   -DSCOTCH_scotcherrexit_LIBRARY=${SCOTCH_scotcherrexit_LIBRARY} )
 
 # forward VTK config
-SET ( VTK_CFG -DUSE_VTK=${USE_VTK} -DVTK_DIR=${VTK_DIR} )
+# SET ( VTK_CFG -DUSE_VTK=${USE_VTK} -DVTK_DIR=${VTK_DIR} )
+SET ( VTK_CFG -DUSE_VTK=0 )
 
 # forward compiler
 SET ( COMPILER_CFG -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
