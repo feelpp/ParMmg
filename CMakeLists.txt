@@ -363,6 +363,9 @@ IF ( DOWNLOAD_METIS )
   FetchContent_MakeAvailable(Metis)
   target_compile_options(metis PRIVATE "-fPIC")
   set_target_properties(metis PROPERTIES OUTPUT_NAME "parmmg_metis")
+  target_include_directories(metis PUBLIC
+      $<BUILD_INTERFACE:${metis_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include/feelpp> )  
   install(TARGETS metis  EXPORT ParMmgTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -521,6 +524,7 @@ IF ( LIBPARMMG_STATIC )
 
   IF ( DOWNLOAD_METIS )
     Add_Dependencies(lib${PROJECT_NAME}_a metis)
+    target_link_directories(lib${PROJECT_NAME}_a metis)
   ENDIF ( )
 
 ENDIF()
