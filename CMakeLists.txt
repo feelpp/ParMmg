@@ -345,20 +345,35 @@ IF ( DOWNLOAD_METIS )
   UNSET ( METIS_DIR CACHE )
 
   # Metis
-  EXTERNALPROJECT_ADD ( Metis
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/metis-5.1.0.tar.gz
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ${CMAKE_MAKE_PROGRAM} config prefix=../../../Metis-install
-    BUILD_IN_SOURCE 1
-    BUILD_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && ${CMAKE_MAKE_PROGRAM}
-    INSTALL_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && ${CMAKE_MAKE_PROGRAM} install
+  #EXTERNALPROJECT_ADD ( Metis
+  #  URL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/metis-5.1.0.tar.gz
+  #  UPDATE_COMMAND ""
+  #  CONFIGURE_COMMAND ${CMAKE_MAKE_PROGRAM} config prefix=../../../Metis-install
+  #  BUILD_IN_SOURCE 1
+  #  BUILD_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && shared=true && ${CMAKE_MAKE_PROGRAM}
+  #  INSTALL_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && shared=true && ${CMAKE_MAKE_PROGRAM} install
+  #  )
+  # patch includes fix for 18.04 compilation
+  FetchContent_Declare(Metis URL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/metis-5.1.0.tar.gz) 
+  if ( NOT ${CMAKE_INSTALL_INCLUDEDIR} MATCHES "feelpp$")
+      set( CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/feelpp")
+  endif()
+  set(SHARED FALSE)
+  FetchContent_MakeAvailable(Metis)
+  target_compile_options(metis PRIVATE "-fPIC")
+  set_target_properties(metis PROPERTIES OUTPUT_NAME "parmmg_metis")
+  install(TARGETS metis  EXPORT ParMmgTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
-  EXTERNALPROJECT_GET_PROPERTY(Metis SOURCE_DIR)
-  SET ( METIS_INSTALL_DIR ${SOURCE_DIR}/../Metis-install)
+  #EXTERNALPROJECT_GET_PROPERTY(Metis SOURCE_DIR)
+  #SET ( METIS_INSTALL_DIR ${SOURCE_DIR}/../Metis-install)
 
-  INCLUDE_DIRECTORIES(${METIS_INSTALL_DIR}/include)
-  SET ( METIS_LIBRARIES ${METIS_INSTALL_DIR}/lib/libmetis.a )
+  #INCLUDE_DIRECTORIES(${METIS_INSTALL_DIR}/include)
+  #SET ( METIS_LIBRARIES ${METIS_INSTALL_DIR}/lib/libmetis.so )
 
   SET(CMAKE_C_FLAGS "-DUSE_METIS ${CMAKE_C_FLAGS}")
 
@@ -504,7 +519,7 @@ IF ( LIBPARMMG_STATIC )
   ENDIF ( )
 
   IF ( DOWNLOAD_METIS )
-    Add_Dependencies(lib${PROJECT_NAME}_a Metis)
+    Add_Dependencies(lib${PROJECT_NAME}_a metis)
   ENDIF ( )
 
 ENDIF()
@@ -529,7 +544,8 @@ IF ( LIBPARMMG_SHARED )
   ENDIF ( )
 
   IF ( DOWNLOAD_METIS )
-    Add_Dependencies(lib${PROJECT_NAME}_so Metis)
+    Add_Dependencies(lib${PROJECT_NAME}_so metis)
+    target_link_libraries(lib${PROJECT_NAME}_so metis)
   ENDIF ( )
 
 ENDIF()
@@ -594,7 +610,7 @@ ENDIF ( )
 add_dependencies(${PROJECT_NAME} libfeelpp_parmmg_so)
 
 IF ( DOWNLOAD_METIS )
-  Add_Dependencies(${PROJECT_NAME} Metis)
+  Add_Dependencies(${PROJECT_NAME} metis)
 ENDIF ( )
 
 ############################################################################
