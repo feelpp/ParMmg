@@ -3,7 +3,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.0)
 INCLUDE(CMakeDependentOption)
 INCLUDE(cmake/modules/macros.cmake)
 
-PROJECT (parmmg)
+PROJECT (feelpp_parmmg)
+
+# Must use GNUInstallDirs to install libraries into correct
+# locations on all platforms.
+include(GNUInstallDirs)
 
 # Must use GNUInstallDirs to install libraries into correct
 # locations on all platforms.
@@ -15,9 +19,9 @@ include(GNUInstallDirs)
 #####
 ###############################################################################
 SET (CMAKE_RELEASE_VERSION_MAJOR "1")
-SET (CMAKE_RELEASE_VERSION_MINOR "0")
+SET (CMAKE_RELEASE_VERSION_MINOR "3")
 SET (CMAKE_RELEASE_VERSION_PATCH "0")
-SET (CMAKE_RELEASE_DATE "Feb 15, 2019")
+SET (CMAKE_RELEASE_DATE "Nov 20, 2020")
 
 SET (CMAKE_RELEASE_VERSION
   "${CMAKE_RELEASE_VERSION_MAJOR}.${CMAKE_RELEASE_VERSION_MINOR}.${CMAKE_RELEASE_VERSION_PATCH}")
@@ -183,9 +187,9 @@ ENDIF ( )
 #####         VTK (to parse (p)vtp/(p)vtu files )
 #####
 ############################################################################
-OPTION ( USE_VTK "Use VTK I/O" ON )
+OPTION ( USE_VTK "Use VTK I/O" OFF )
 
-IF ( USE_VTK )
+IF ( 0 ) # USE_VTK )
   FIND_PACKAGE(VTK QUIET)
 
   IF ( NOT VTK_FOUND )
@@ -207,7 +211,7 @@ IF( SCOTCH_FOUND )
 ENDIF()
 
 
-IF ( VTK_FOUND )
+IF ( 0 ) # VTK_FOUND )
   ENABLE_LANGUAGE ( CXX )
   ADD_DEFINITIONS(-DUSE_VTK)
   MESSAGE ( STATUS "Compilation with VTK: add vtp and vtu I/O." )
@@ -229,7 +233,8 @@ SET ( SCOTCH_CFG -DUSE_SCOTCH=${USE_SCOTCH} -DSCOTCH_DIR=${SCOTCH_DIR}
   -DSCOTCH_scotcherrexit_LIBRARY=${SCOTCH_scotcherrexit_LIBRARY} )
 
 # forward VTK config
-SET ( VTK_CFG -DUSE_VTK=${USE_VTK} -DVTK_DIR=${VTK_DIR} )
+# SET ( VTK_CFG -DUSE_VTK=${USE_VTK} -DVTK_DIR=${VTK_DIR} )
+SET ( VTK_CFG -DUSE_VTK=0 )
 
 # forward compiler
 SET ( COMPILER_CFG -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -286,7 +291,7 @@ IF ( DOWNLOAD_MMG )
   INCLUDE_DIRECTORIES(${MMG_SOURCE_DIR}/src/mmg3d)
   INCLUDE_DIRECTORIES(${MMG_SOURCE_DIR}/src/common)
 
-ELSE ( )
+ELSEIF  ( 0 )
   UNSET ( USE_POINTMAP CACHE )
 
   SET(MMG_DIR "" CACHE PATH "Installation directory for mmg")
@@ -341,20 +346,38 @@ IF ( DOWNLOAD_METIS )
   UNSET ( METIS_DIR CACHE )
 
   # Metis
-  EXTERNALPROJECT_ADD ( Metis
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/metis-5.1.0.tar.gz
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ${CMAKE_MAKE_PROGRAM} config prefix=../../../Metis-install
-    BUILD_IN_SOURCE 1
-    BUILD_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && ${CMAKE_MAKE_PROGRAM}
-    INSTALL_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && ${CMAKE_MAKE_PROGRAM} install
+  #EXTERNALPROJECT_ADD ( Metis
+  #  URL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/metis-5.1.0.tar.gz
+  #  UPDATE_COMMAND ""
+  #  CONFIGURE_COMMAND ${CMAKE_MAKE_PROGRAM} config prefix=../../../Metis-install
+  #  BUILD_IN_SOURCE 1
+  #  BUILD_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && shared=true && ${CMAKE_MAKE_PROGRAM}
+  #  INSTALL_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && shared=true && ${CMAKE_MAKE_PROGRAM} install
+  #  )
+  # patch includes fix for 18.04 compilation
+  FetchContent_Declare(Metis URL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/metis-5.1.0.tar.gz) 
+  if ( NOT ${CMAKE_INSTALL_INCLUDEDIR} MATCHES "feelpp$")
+      set( CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/feelpp")
+  endif()
+  set(SHARED FALSE)
+  FetchContent_MakeAvailable(Metis)
+  target_compile_options(metis PRIVATE "-fPIC")
+  set_target_properties(metis PROPERTIES OUTPUT_NAME "parmmg_metis")
+  target_include_directories(metis PUBLIC
+      $<BUILD_INTERFACE:${metis_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include/feelpp> )  
+  install(TARGETS metis  EXPORT ParMmgTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
 
-  EXTERNALPROJECT_GET_PROPERTY(Metis SOURCE_DIR)
-  SET ( METIS_INSTALL_DIR ${SOURCE_DIR}/../Metis-install)
+  #EXTERNALPROJECT_GET_PROPERTY(Metis SOURCE_DIR)
+  #SET ( METIS_INSTALL_DIR ${SOURCE_DIR}/../Metis-install)
 
-  INCLUDE_DIRECTORIES(${METIS_INSTALL_DIR}/include)
-  SET ( METIS_LIBRARIES ${METIS_INSTALL_DIR}/lib/libmetis.a )
+  #INCLUDE_DIRECTORIES(${METIS_INSTALL_DIR}/include)
+  #SET ( METIS_LIBRARIES ${METIS_INSTALL_DIR}/lib/libmetis.so )
 
   SET(CMAKE_C_FLAGS "-DUSE_METIS ${CMAKE_C_FLAGS}")
 
@@ -500,7 +523,8 @@ IF ( LIBPARMMG_STATIC )
   ENDIF ( )
 
   IF ( DOWNLOAD_METIS )
-    Add_Dependencies(lib${PROJECT_NAME}_a Metis)
+    Add_Dependencies(lib${PROJECT_NAME}_a metis)
+    target_link_directories(lib${PROJECT_NAME}_a metis)
   ENDIF ( )
 
 ENDIF()
@@ -512,10 +536,21 @@ IF ( LIBPARMMG_SHARED )
 
   IF ( DOWNLOAD_MMG )
     Add_Dependencies(lib${PROJECT_NAME}_so Mmg)
+  else()
+    target_link_libraries(lib${PROJECT_NAME}_so libfeelpp_mmg_so libfeelpp_mmgs_so libfeelpp_mmg3d_so)
+    target_include_directories(lib${PROJECT_NAME}_so PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../mmg/include>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/common>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../mmg/src/common>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/mmg2d>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/mmgs>
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mmg/src/mmg3d>
+      $<INSTALL_INTERFACE:include/feelpp> )  
   ENDIF ( )
 
   IF ( DOWNLOAD_METIS )
-    Add_Dependencies(lib${PROJECT_NAME}_so Metis)
+    Add_Dependencies(lib${PROJECT_NAME}_so metis)
+    target_link_libraries(lib${PROJECT_NAME}_so metis)
   ENDIF ( )
 
 ENDIF()
@@ -540,18 +575,32 @@ INSTALL(FILES ${pmmg_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/parmmg COM
 COPY_HEADERS_AND_CREATE_TARGET ( ${PMMG_SOURCE_DIR} ${PMMG_BINARY_DIR} ${PMMG_INCLUDE} )
 
 
-install(EXPORT ParMmgTargets
-  FILE ParMmgTargets.cmake
-  NAMESPACE ParMmg::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/parmmg
-  )
-
+#install(EXPORT ParMmgTargets
+#  FILE ParMmgTargets.cmake
+#  NAMESPACE ParMmg::
+#  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/parmmg
+#  )
+#
 IF (LIBPARMMG_STATIC OR LIBPARMMG_SHARED)
   SET(LIBPARMMG_INTERNAL ON )
 ELSE()
   SET(LIBPARMMG_INTERNAL OFF )
 ENDIF()
 
+set( PARMMG_CMAKE_INSTALL_DIR share/feelpp/feel/cmake/modules )
+
+configure_package_config_file(cmake/modules/parmmgConfig.cmake.in
+${PROJECT_BINARY_DIR}/parmmgConfig.cmake
+INSTALL_DESTINATION ${PARMMG_CMAKE_INSTALL_DIR} )
+
+install(EXPORT ParMmgTargets
+  FILE ParMmgTargets.cmake
+  NAMESPACE ParMmg::
+  DESTINATION ${PARMMG_CMAKE_INSTALL_DIR}
+  )
+
+  install(FILES ${PROJECT_BINARY_DIR}/parmmgConfig.cmake
+          DESTINATION ${PARMMG_CMAKE_INSTALL_DIR} )
 ###############################################################################
 #####
 #####         Compile PMMG executable
@@ -561,11 +610,12 @@ ADD_AND_INSTALL_EXECUTABLE ( ${PROJECT_NAME}
   "${pmmg_library_files}" ${pmmg_main_file} )
 
 IF ( DOWNLOAD_MMG )
-  Add_Dependencies(parmmg Mmg)
+  Add_Dependencies(${PROJECT_NAME} Mmg)
 ENDIF ( )
+add_dependencies(${PROJECT_NAME} libfeelpp_parmmg_so)
 
 IF ( DOWNLOAD_METIS )
-  Add_Dependencies(parmmg Metis)
+  Add_Dependencies(${PROJECT_NAME} metis)
 ENDIF ( )
 
 ############################################################################
@@ -576,17 +626,17 @@ ENDIF ( )
 
 IF (NOT WIN32 OR MINGW)
 
-  ADD_CUSTOM_TARGET(GenerateGitHash
+  ADD_CUSTOM_TARGET(GenerateGitHashParMmg
     COMMAND ./git_log_pmmg.sh ${PROJECT_SOURCE_DIR} ${PMMG_BINARY_DIR}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/scripts/
     COMMENT "Getting git commit hash"
   )
-  ADD_DEPENDENCIES(${PROJECT_NAME} GenerateGitHash)
+  ADD_DEPENDENCIES(${PROJECT_NAME} GenerateGitHashParMmg)
   IF( LIBPARMMG_STATIC )
-    ADD_DEPENDENCIES(lib${PROJECT_NAME}_a GenerateGitHash)
+    ADD_DEPENDENCIES(lib${PROJECT_NAME}_a GenerateGitHashParMmg)
   ENDIF ()
   IF( LIBPARMMG_SHARED )
-    ADD_DEPENDENCIES(lib${PROJECT_NAME}_so GenerateGitHash)
+    ADD_DEPENDENCIES(lib${PROJECT_NAME}_so GenerateGitHashParMmg)
   ENDIF ()
 
   INCLUDE_DIRECTORIES(${PMMG_BINARY_DIR})
@@ -636,4 +686,4 @@ CMAKE_DEPENDENT_OPTION (
   (non library tests)" OFF  "BUILD_TESTING;LIBPARMMG_INTERNAL" OFF )
 
 
-INCLUDE( ${PROJECT_SOURCE_DIR}/cmake/testing/pmmg_tests.cmake )
+# INCLUDE( ${PROJECT_SOURCE_DIR}/cmake/testing/pmmg_tests.cmake )

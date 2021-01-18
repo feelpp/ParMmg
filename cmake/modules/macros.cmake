@@ -108,7 +108,7 @@ MACRO ( COPY_HEADERS_AND_CREATE_TARGET
     COPY_HEADER (
       ${binary_dir} git_log_pmmg.h
       ${include_dir} git_log_pmmg.h
-      GenerateGitHash copy_pmmggithash )
+      GenerateGitHashParMmg copy_pmmggithash )
 
     LIST ( APPEND tgt_list copy_pmmggithash)
   ENDIF ()
@@ -130,6 +130,10 @@ MACRO ( ADD_AND_INSTALL_LIBRARY
 
   ADD_LIBRARY ( ${target_name} ${target_type} ${sources} )
   add_library( ParMmg::${target_name} ALIAS ${target_name} )
+
+  IF ( "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang"  AND  ${CMAKE_C_COMPILER_VERSION} VERSION_GREATER 10 )
+    target_compile_options(${target_name} PRIVATE "-fcommon")
+  ENDIF()
 
   IF ( CMAKE_VERSION VERSION_LESS 2.8.12 )
     INCLUDE_DIRECTORIES ( ${target_name} PRIVATE
@@ -154,7 +158,6 @@ MACRO ( ADD_AND_INSTALL_LIBRARY
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    Component lib
     )
 ENDMACRO ( )
 
