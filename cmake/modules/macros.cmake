@@ -130,7 +130,7 @@ MACRO ( ADD_AND_INSTALL_LIBRARY
 
   ADD_LIBRARY ( ${target_name} ${target_type} ${sources} )
   add_library( ParMmg::${target_name} ALIAS ${target_name} )
-
+  set_target_properties( ${target_name} PROPERTIES VERSION 1 SOVERSION 1 )
   IF ( "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang"  AND  ${CMAKE_C_COMPILER_VERSION} VERSION_GREATER 10 )
     target_compile_options(${target_name} PRIVATE "-fcommon")
   ENDIF()
