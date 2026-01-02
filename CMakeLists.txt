@@ -653,11 +653,18 @@ ENDIF ( )
 
 IF (NOT WIN32 OR MINGW)
 
-  ADD_CUSTOM_TARGET(GenerateGitHashParMmg
+  ADD_CUSTOM_COMMAND(
+    OUTPUT ${PMMG_BINARY_DIR}/git_log_pmmg.h
     COMMAND ./git_log_pmmg.sh ${PROJECT_SOURCE_DIR} ${PMMG_BINARY_DIR}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/scripts/
     COMMENT "Getting git commit hash"
+    VERBATIM
   )
+  
+  ADD_CUSTOM_TARGET(GenerateGitHashParMmg
+    DEPENDS ${PMMG_BINARY_DIR}/git_log_pmmg.h
+  )
+  
   ADD_DEPENDENCIES(${PROJECT_NAME} GenerateGitHashParMmg)
   IF( LIBPARMMG_STATIC )
     ADD_DEPENDENCIES(lib${PROJECT_NAME}_a GenerateGitHashParMmg)
